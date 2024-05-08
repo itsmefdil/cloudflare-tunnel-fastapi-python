@@ -15,6 +15,10 @@ pip install -r requirements.txt
 ### Usage
 
 ```bash
+cp .env.example .env
+```
+
+```bash
 uvicorn main:app --reload
 ```
 
