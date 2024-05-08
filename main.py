@@ -34,7 +34,9 @@ def cloudflare_dns():
         "Content-Type": "application/json",
     }
     response = requests.get(
-        "https://api.cloudflare.com/client/v4/zones/4755d9a7f5f0fdbf0941ff1af70c206e/dns_records",
+        "https://api.cloudflare.com/client/v4/zones/"
+        + config["CLOUDFLARE_ZONE_ID"]
+        + "/dns_records",
         headers=headers,
     )
     return response.json()
@@ -52,8 +54,63 @@ def cloudflare_tunnel():
     }
     response = requests.get(
         "https://api.cloudflare.com/client/v4/accounts/"
-        + config["CLOUDFLARE_TUNNEL_ID"]
+        + config["CLOUDFLARE_TUNNEL_ACCOUNT_ID"]
+        + "/cfd_tunnel/"
+        + config["CLOUDFLARE_TUNNEL_ID"],
+        headers=headers,
+    )
+    return response.json()
+
+
+# Get CF List All Tunnels
+@app.get("/cloudflare/tunnels/all")
+def get_cf_tunnels_all():
+    headers = {
+        "X-Auth-Email": config["CLOUDFLARE_EMAIL"],
+        "X-Auth-Key": config["CLOUDFLARE_API_KEY"],
+        "Authorization Bearer": config["CLOUDFLARE_API_KEY"],
+        "Content-Type": "application/json",
+    }
+    response = requests.get(
+        "https://api.cloudflare.com/client/v4/accounts/"
+        + config["CLOUDFLARE_TUNNEL_ACCOUNT_ID"]
         + "/tunnels",
+        headers=headers,
+    )
+    return response.json()
+
+
+# Get CF List Tunnels Connections
+@app.get("/cloudflare/tunnels/connections")
+def get_cf_tunnels_connections():
+    headers = {
+        "X-Auth-Email": config["CLOUDFLARE_EMAIL"],
+        "X-Auth-Key": config["CLOUDFLARE_API_KEY"],
+        "Authorization Bearer": config["CLOUDFLARE_API_KEY"],
+        "Content-Type": "application/json",
+    }
+    response = requests.get(
+        "https://api.cloudflare.com/client/v4/accounts/"
+        + config["CLOUDFLARE_TUNNEL_ACCOUNT_ID"]
+        + "/cfd_tunnel/b1c2610f-ca96-4fcc-8b71-b71b6adcb231/connections",
+        headers=headers,
+    )
+    return response.json()
+
+
+# Get CF Tunnel Warp
+@app.get("/cloudflare/tunnel/warp")
+def get_cf_tunnel_wrap():
+    headers = {
+        "X-Auth-Email": config["CLOUDFLARE_EMAIL"],
+        "X-Auth-Key": config["CLOUDFLARE_API_KEY"],
+        "Authorization Bearer": config["CLOUDFLARE_API_KEY"],
+        "Content-Type": "application/json",
+    }
+    response = requests.get(
+        "https://api.cloudflare.com/client/v4/accounts/"
+        + config["CLOUDFLARE_TUNNEL_ACCOUNT_ID"]
+        + "/warp_connector",
         headers=headers,
     )
     return response.json()
