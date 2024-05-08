@@ -2,6 +2,7 @@ import os
 import platform
 import psutil
 import requests
+import json
 from fastapi import FastAPI
 from dotenv import dotenv_values
 
@@ -19,7 +20,8 @@ def cloudflare_zones():
         "Content-Type": "application/json",
     }
     response = requests.get(
-        "https://api.cloudflare.com/client/v4/zones", headers=headers, data=data
+        "https://api.cloudflare.com/client/v4/zones",
+        headers=headers,
     )
     return response.json()
 
@@ -62,57 +64,104 @@ def cloudflare_tunnel():
     return response.json()
 
 
-# Get CF List All Tunnels
-@app.get("/cloudflare/tunnels/all")
-def get_cf_tunnels_all():
+# Get Cloudflare Tunnel Configurations
+@app.get("/cloudflare/tunnel/configurations")
+def cloudflare_tunnel_configurations():
     headers = {
         "X-Auth-Email": config["CLOUDFLARE_EMAIL"],
         "X-Auth-Key": config["CLOUDFLARE_API_KEY"],
         "Authorization Bearer": config["CLOUDFLARE_API_KEY"],
+        # "X-Auth-User-Service-Key": config["CLOUDFLARE_USER_SERVICE_KEY"],
         "Content-Type": "application/json",
     }
     response = requests.get(
         "https://api.cloudflare.com/client/v4/accounts/"
         + config["CLOUDFLARE_TUNNEL_ACCOUNT_ID"]
-        + "/tunnels",
+        + "/cfd_tunnel/"
+        + config["CLOUDFLARE_TUNNEL_ID"]
+        + "/configurations",
         headers=headers,
     )
+
+    data = json.loads(response.text)
+    data = data["result"]["config"]["ingress"]
+
+    return data
+
+
+# Get Cloudflare Tunnel Configurations
+@app.get("/cloudflare/tunnel/configurations1")
+def cloudflare_tunnel_configurations():
+    headers = {
+        "X-Auth-Email": config["CLOUDFLARE_EMAIL"],
+        "X-Auth-Key": config["CLOUDFLARE_API_KEY"],
+        "Authorization Bearer": config["CLOUDFLARE_API_KEY"],
+        # "X-Auth-User-Service-Key": config["CLOUDFLARE_USER_SERVICE_KEY"],
+        "Content-Type": "application/json",
+    }
+    response = requests.get(
+        "https://api.cloudflare.com/client/v4/accounts/"
+        + config["CLOUDFLARE_TUNNEL_ACCOUNT_ID"]
+        + "/cfd_tunnel/"
+        + config["CLOUDFLARE_TUNNEL_ID"]
+        + "/configurations",
+        headers=headers,
+    )
+
     return response.json()
 
 
-# Get CF List Tunnels Connections
-@app.get("/cloudflare/tunnels/connections")
-def get_cf_tunnels_connections():
+# Put Cloudflare Tunnel Configurations
+@app.put("/cloudflare/tunnel/configurations")
+def post_cf_tunnel_hostnames(
+    name: str,
+    service: str,
+    path: str = None,
+):
+    url = (
+        "https://api.cloudflare.com/client/v4/accounts/"
+        + config["CLOUDFLARE_TUNNEL_ACCOUNT_ID"]
+        + "/cfd_tunnel/"
+        + config["CLOUDFLARE_TUNNEL_ID"]
+        + "/configurations"
+    )
     headers = {
         "X-Auth-Email": config["CLOUDFLARE_EMAIL"],
         "X-Auth-Key": config["CLOUDFLARE_API_KEY"],
-        "Authorization Bearer": config["CLOUDFLARE_API_KEY"],
+        "Authorization Bearer": config["CLOUDFLARE_TOKEN"],
         "Content-Type": "application/json",
     }
-    response = requests.get(
-        "https://api.cloudflare.com/client/v4/accounts/"
-        + config["CLOUDFLARE_TUNNEL_ACCOUNT_ID"]
-        + "/cfd_tunnel/b1c2610f-ca96-4fcc-8b71-b71b6adcb231/connections",
-        headers=headers,
-    )
-    return response.json()
 
+    old_data = json.loads(response.text)
+    old_data = data["result"]["config"]["ingress"]
+    old_data = old_data[:-1]
 
-# Get CF Tunnel Warp
-@app.get("/cloudflare/tunnel/warp")
-def get_cf_tunnel_wrap():
-    headers = {
-        "X-Auth-Email": config["CLOUDFLARE_EMAIL"],
-        "X-Auth-Key": config["CLOUDFLARE_API_KEY"],
-        "Authorization Bearer": config["CLOUDFLARE_API_KEY"],
-        "Content-Type": "application/json",
+    data = {
+        "config": {
+            "warp-routing": {
+                "enabled": True,
+            },
+            "ingress": [
+                *old_data,
+                {
+                    "hostname": name,
+                    "service": service,
+                    "path": path,
+                    "originRequest": {
+                        "connectTimeout": 10,
+                    },
+                },
+                {"service": "http_status:404"},
+            ],
+        }
     }
-    response = requests.get(
-        "https://api.cloudflare.com/client/v4/accounts/"
-        + config["CLOUDFLARE_TUNNEL_ACCOUNT_ID"]
-        + "/warp_connector",
-        headers=headers,
-    )
+
+    response = requests.put(url, headers=headers, json=data)
+
+    if response.status_code == 200:
+        print("Configuration updated successfully.")
+    else:
+        print("Error updating configuration:", response.text)
     return response.json()
 
 
